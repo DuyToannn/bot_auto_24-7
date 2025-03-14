@@ -1,7 +1,13 @@
 FROM python:3.12-slim
 
-# Cài đặt các thư viện hệ thống
+# Cài đặt các công cụ cần thiết và thêm kho lưu trữ Google Chrome
 RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    && wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update \
+    && apt-get install -y \
     google-chrome-stable \
     libglib2.0-0 \
     libnss3 \
