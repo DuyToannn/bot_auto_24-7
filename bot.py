@@ -4,7 +4,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 import requests
 import time
 import json
@@ -21,7 +20,7 @@ chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
 chrome_options.add_experimental_option("useAutomationExtension", False)
 
 # Tự động tải ChromeDriver
-service = Service(ChromeDriverManager().install())
+service = Service()
 
 # 🏷 Cấu hình Cookie & Webhook
 COOKIE_FILE = "cookies.txt"
