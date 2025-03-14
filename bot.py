@@ -74,7 +74,7 @@ def run_bot():
     try:
         # Mở trang gốc
         print("🌍 Mở trang gốc...", file=sys.stdout)
-        driver.get("https://new8838.net/")
+        driver.get(os.getenv('BASE_URL'))
         time.sleep(3)
 
         # Tải cookie
@@ -92,7 +92,7 @@ def run_bot():
 
         # Mở trang nạp tiền
         print("➡️ Mở trang nạp tiền...", file=sys.stdout)
-        driver.get("https://new8838.net/Deposit")
+        driver.get(os.getenv('DEPOSIT_URL'))
         time.sleep(3)
 
         # Đóng popup (nếu có)
@@ -140,7 +140,7 @@ def run_bot():
             print(f"❌ Lỗi khi nhấn nút Thanh toán: {e}", file=sys.stdout)
 
         # Chuyển sang tab mới
-        WebDriverWait(driver, 20).until(EC.number_of_windows_to_be(2))
+        WebDriverWait(driver, 60).until(EC.number_of_windows_to_be(2))
         original_window = driver.current_window_handle
         for window_handle in driver.window_handles:
             if window_handle != original_window:
@@ -151,13 +151,13 @@ def run_bot():
         # Lấy thông tin ngân hàng
         print("📋 Lấy thông tin tài khoản ngân hàng...", file=sys.stdout)
         try:
-            ho_ten = WebDriverWait(driver, 20).until(
+            ho_ten = WebDriverWait(driver, 60).until(
                 EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Người nhận tiền:')]/following-sibling::div[@class='text']/span[@class='value high-light']"))
             ).text
-            stk = WebDriverWait(driver, 20).until(
+            stk = WebDriverWait(driver, 60).until(
                 EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Số tài khoản ngân hàng:')]/following-sibling::div[@class='text']/span[@class='value high-light']"))
             ).text
-            ten_ngan_hang = WebDriverWait(driver, 20).until(
+            ten_ngan_hang = WebDriverWait(driver, 60).until(
                 EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'Tên ngân hàng:')]/following-sibling::div[@class='text']/span[@class='value']"))
             ).text
 
