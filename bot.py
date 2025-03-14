@@ -10,6 +10,15 @@ import json
 import os
 import random
 
+chrome_options = webdriver.ChromeOptions()
+chrome_options.add_argument("--headless")  # Chạy không giao diện
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--disable-dev-shm-usage")
+
+# Tự động tải ChromeDriver
+service = Service(ChromeDriverManager().install())
+driver = webdriver.Chrome(service=service, options=chrome_options)
+
 COOKIE_FILE = "cookies.txt"
 WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/21914696/2ldbgyz/" 
 
