@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ['python312', 'google-chrome', 'chromedriver', 'libglib2.0', 'libnss3', 'libgconf-2-4', 'fontconfig']
+
+[phases.build]
+cmds = ['pip install -r requirements.txt']
+
+[start]
+cmd = 'python bot.py'  # Thay bot.py bằng tên file chính của bạn
