@@ -1,8 +1,0 @@
-[phases.setup]
-nixPkgs = ['python312', 'google-chrome', 'chromedriver', 'libglib2.0', 'libnss3', 'libgconf-2-4', 'fontconfig', 'libx11', 'libxcomposite', 'libxcursor', 'libxdamage', 'libxi', 'libxtst', 'libxrandr']
-
-[phases.build]
-cmds = ['pip install -r requirements.txt']
-
-[start]
-cmd = 'python bot.py'
