@@ -34,13 +34,17 @@ def run_bot():
     user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
     chrome_options.add_argument(f"user-agent={user_agent}")
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-    chrome_options.add_argument("--headless")  # Chạy không giao diện
-    chrome_options.add_argument("--no-sandbox")  # Bỏ qua sandbox
-    chrome_options.add_argument("--disable-dev-shm-usage")  # Khắc phục lỗi bộ nhớ
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     chrome_options.add_experimental_option("useAutomationExtension", False)
 
+    print("🔍 Khởi tạo ChromeDriver...")
     driver = webdriver.Chrome(options=chrome_options)
+    print("✅ ChromeDriver đã khởi động thành công!")
+    print(f"📋 Phiên bản Chrome: {driver.capabilities['browserVersion']}")
+    print(f"📋 Phiên bản ChromeDriver: {driver.capabilities['chrome']['chromedriverVersion']}")
     
     try:
         print("🌍 Mở trang gốc...")
@@ -147,10 +151,10 @@ if __name__ == "__main__":
         try:
             run_bot()
             print("🔄 Chờ 5 giây trước khi chạy lại...")
-            time.sleep(5)  # Chạy lại sau 5 giây
+            time.sleep(5)
         except KeyboardInterrupt:
             print("\n⛔ Đã dừng chương trình bởi người dùng")
             break
         except Exception as e:
             print(f"❌ Lỗi không mong muốn: {e}")
-            time.sleep(5)  # Nếu có lỗi, vẫn chờ 5 giây rồi thử lại
+            time.sleep(5)
