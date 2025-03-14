@@ -1,3 +1,7 @@
+import sys
+
+print("🔵 Bot đang khởi động...", file=sys.stdout)
+sys.stdout.flush()  # Đảm bảo log được gửi ngay lập tức
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
