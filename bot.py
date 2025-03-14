@@ -16,7 +16,7 @@ from dotenv import load_dotenv  # Để đọc file .env trên local
 load_dotenv()
 
 # Cấu hình
-COOKIE_ENV_VAR = "COOKIES_JSON"  # Tên biến môi trường
+COOKIE_ENV_VAR = "COOKIES_JSON"  
 WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/21914696/2ldbgyz/"
 PACKAGE_NAME = "Nạp Nhanh 04"  
 
