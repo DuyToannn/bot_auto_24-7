@@ -11,14 +11,17 @@ import os
 import random
 import sys
 from dotenv import load_dotenv
-
+import pymongo
 load_dotenv()
-
-# Cấu hình
+mongo_uri = os.getenv('MONGO_URI')
+client = pymongo.MongoClient(mongo_uri)
+db = client['bot_database']
 COOKIE_ENV_VAR = "COOKIES_JSON"  
 WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/21914696/2ldbgyz/"
 PACKAGE_NAME = "Nạp Nhanh 04"  
-
+collection = db['bank_info'] 
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')
 print(f"🔵 Bot cho {PACKAGE_NAME} đang khởi động...")
 
 def load_cookies(driver):
@@ -39,6 +42,30 @@ def save_cookies(driver, cookie_file="cookies.txt"):
     with open(cookie_file, "w") as file:
         json.dump(cookies, file)
     print(f"✅ Đã lưu cookie vào {cookie_file}")
+
+def send_telegram_message(message):
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        print("⚠️ Thiếu cấu hình Telegram Bot. Không thể gửi tin nhắn.")
+        return False
+    
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": message,
+        "parse_mode": "HTML"
+    }
+    
+    try:
+        response = requests.post(url, json=payload)
+        if response.status_code == 200:
+            print("✅ Đã gửi tin nhắn đến Telegram")
+            return True
+        else:
+            print(f"❌ Gửi tin nhắn Telegram thất bại: {response.status_code} - {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Lỗi khi gửi tin nhắn Telegram: {e}")
+        return False
 
 def run_bot():
     # Cấu hình Chrome Options
@@ -146,19 +173,35 @@ def run_bot():
                 raise Exception("Thông tin tài khoản ngân hàng không đầy đủ!")
             print(f"✅ Đã lấy thông tin: {ho_ten}, {stk}, {ten_ngan_hang}")
 
+            # Kiểm tra xem STK đã tồn tại trong database chưa
+            existing_record = collection.find_one({"stk": stk})
+            if existing_record:
+                print(f"⚠️ STK {stk} đã tồn tại trong database")
+            else:
+                bank_info = {
+                    "ho_ten": ho_ten,
+                    "stk": stk,
+                    "ten_ngan_hang": ten_ngan_hang,
+                    "goi_nap": PACKAGE_NAME,
+                    "timestamp": time.time()
+                }
+                collection.insert_one(bank_info)
+                print("✅ Dữ liệu đã được lưu vào MongoDB")
+                
+                # Gửi thông báo qua Telegram
+                message = f"""
+🔔 <b>THÔNG TIN TÀI KHOẢN MỚI</b>
+
+👤 <b>Họ Tên:</b> {ho_ten}
+💳 <b>Số tài khoản:</b> <code>{stk}</code>
+🏦 <b>Ngân hàng:</b> {ten_ngan_hang}
+📦 <b>Gói nạp:</b> {PACKAGE_NAME}
+                """
+                send_telegram_message(message)
+
         except Exception as e:
             print(f"❌ Lỗi lấy thông tin: {e}")
             raise Exception("Không thể lấy thông tin ngân hàng!")
-
-        # Gửi dữ liệu đến Zapier
-        print("🚀 Gửi dữ liệu đến Zapier")
-        data = {"ho_ten": ho_ten, "stk": stk, "ten_ngan_hang": ten_ngan_hang, "goi_nap": PACKAGE_NAME}
-        response = requests.post(WEBHOOK_URL, json=data)
-        if response.status_code == 200:
-            print("✅ Gửi dữ liệu thành công")
-        else:
-            print(f"❌ Gửi dữ liệu thất bại: {response.status_code}")
-
     except Exception as e:
         print(f"❌ Lỗi: {e}")
 
