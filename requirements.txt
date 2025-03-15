@@ -21,3 +21,4 @@ selenium>=4.6.0
 webdriver-manager
 requests
 pymongo==4.6.2
+

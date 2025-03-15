@@ -4,6 +4,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service
 import requests
 import time
 import json
@@ -12,14 +14,32 @@ import random
 import sys
 from dotenv import load_dotenv
 import pymongo
+from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
+
+# Load environment variables
 load_dotenv()
+
+# MongoDB configuration with error handling
 mongo_uri = os.getenv('MONGO_URI')
-client = pymongo.MongoClient(mongo_uri)
-db = client['bot_database']
+db = None
+collection = None
+mongo_client = None
+
+try:
+    mongo_client = pymongo.MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
+    # Force a connection to verify it works
+    mongo_client.admin.command('ping')
+    db = mongo_client['bot_database']
+    collection = db['bank_info']
+    print("✅ MongoDB connection successful")
+except (ConnectionFailure, ServerSelectionTimeoutError) as e:
+    print(f"❌ MongoDB connection error: {e}")
+    print("⚠️ Bot will continue without database functionality")
+
+# Constants
 COOKIE_ENV_VAR = "COOKIES_JSON"  
 WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/21914696/2ldbgyz/"
 PACKAGE_NAME = "Nạp Nhanh 04"  
-collection = db['bank_info'] 
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')
 print(f"🔵 Bot cho {PACKAGE_NAME} đang khởi động...")
@@ -67,6 +87,31 @@ def send_telegram_message(message):
         print(f"❌ Lỗi khi gửi tin nhắn Telegram: {e}")
         return False
 
+def save_to_database(bank_info):
+    if collection is None:
+        print("⚠️ Không thể lưu vào database - Kết nối MongoDB không khả dụng")
+        return False
+    
+    try:
+        collection.insert_one(bank_info)
+        print("✅ Dữ liệu đã được lưu vào MongoDB")
+        return True
+    except Exception as e:
+        print(f"❌ Lỗi khi lưu vào database: {e}")
+        return False
+
+def check_existing_record(stk):
+    if collection is None:
+        print("⚠️ Không thể kiểm tra database - Kết nối MongoDB không khả dụng")
+        return False
+    
+    try:
+        existing_record = collection.find_one({"stk": stk})
+        return existing_record is not None
+    except Exception as e:
+        print(f"❌ Lỗi khi kiểm tra database: {e}")
+        return False
+
 def run_bot():
     # Cấu hình Chrome Options
     chrome_options = Options()
@@ -80,8 +125,14 @@ def run_bot():
     chrome_options.add_experimental_option("useAutomationExtension", False)
 
     # Khởi tạo ChromeDriver
-    driver = webdriver.Chrome(options=chrome_options)
-    print("✅ ChromeDriver đã khởi động")
+    try:
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+        print("✅ ChromeDriver đã khởi động")
+    except Exception as e:
+        print(f"❌ Lỗi khởi động ChromeDriver: {e}")
+        driver = webdriver.Chrome(options=chrome_options)
+        print("✅ ChromeDriver đã khởi động (phương thức dự phòng)")
     
     try:
         # Mở trang gốc
@@ -174,8 +225,7 @@ def run_bot():
             print(f"✅ Đã lấy thông tin: {ho_ten}, {stk}, {ten_ngan_hang}")
 
             # Kiểm tra xem STK đã tồn tại trong database chưa
-            existing_record = collection.find_one({"stk": stk})
-            if existing_record:
+            if check_existing_record(stk):
                 print(f"⚠️ STK {stk} đã tồn tại trong database")
             else:
                 bank_info = {
@@ -185,8 +235,7 @@ def run_bot():
                     "goi_nap": PACKAGE_NAME,
                     "timestamp": time.time()
                 }
-                collection.insert_one(bank_info)
-                print("✅ Dữ liệu đã được lưu vào MongoDB")
+                save_to_database(bank_info)
                 
                 # Gửi thông báo qua Telegram
                 message = f"""
