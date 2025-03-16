@@ -45,8 +45,8 @@ except (ConnectionFailure, ServerSelectionTimeoutError) as e:
     print(f"❌ MongoDB connection error: {e}")
     print("⚠️ Bot will continue without database functionality")
 
+
 # Constants
-WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/21914696/2ldbgyz/"
 PACKAGE_NAME = "Nạp Nhanh 04"
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')
@@ -120,20 +120,18 @@ def run_bot():
         options = uc.ChromeOptions()
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--disable-gpu")
         options.add_argument("--start-maximized")
         options.add_argument("--disable-notifications")
         options.add_argument("--disable-popup-blocking")
+        # Thiết lập kích thước cửa sổ Chrome nhỏ hơn
+        options.add_argument("--window-size=1024,768")
+        # Vô hiệu hóa chế độ toàn màn hình
+        options.add_argument("--start-maximized=false")
 
         options.add_argument('--headless')         # Thêm các tham số để giả lập người dùng thực
         options.add_argument("--disable-blink-features")
         options.add_argument(f'--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
-        
-        # Tạo profile riêng để lưu cookie và thông tin đăng nhập
-        profile_path = os.path.join(os.getcwd(), "chrome_profile")
-        os.makedirs(profile_path, exist_ok=True)
-        options.add_argument(f"--user-data-dir={profile_path}")
-        
+
         # Khởi tạo trình duyệt với undetected_chromedriver
         driver = uc.Chrome(options=options)
         
@@ -234,8 +232,10 @@ def run_bot():
                 
                 random_sleep(0.5, 1.5)
 
-                button = driver.find_element(By.XPATH, "//button[contains(@ng-class, 'login-btn')]")
-                button.click()
+                # Sử dụng JavaScript để click vào nút đăng nhập thay vì click trực tiếp
+                # Điều này giúp tránh lỗi aria-hidden
+                login_button = driver.find_element(By.XPATH, "//button[contains(@ng-class, 'login-btn')]")
+                driver.execute_script("arguments[0].click();", login_button)
                 random_sleep(2, 4)
 
                 # Kiểm tra thông báo lỗi
@@ -245,8 +245,9 @@ def run_bot():
                     )
                     # Nếu có thông báo lỗi
                     print("⚠️ Mã xác minh không đúng, thử lại...")
+                    # Sử dụng JavaScript để click vào nút đóng thông báo lỗi
                     close_button = error_dialog.find_element(By.XPATH, ".//button[contains(@ng-click, '$ctrl.ok()')]")
-                    close_button.click()
+                    driver.execute_script("arguments[0].click();", close_button)
                     random_sleep(1, 2)
                     continue
                 except:
@@ -266,9 +267,10 @@ def run_bot():
 
         # Kiểm tra và đóng popup nếu có
         try:
-            WebDriverWait(driver, 5).until(
+            popup_close = WebDriverWait(driver, 5).until(
                 EC.presence_of_element_located((By.XPATH, "//span[@translate='Common_Closed']"))
-            ).click()
+            )
+            driver.execute_script("arguments[0].click();", popup_close)
             random_sleep(0.5, 1.5)
         except Exception:
             pass
@@ -281,7 +283,8 @@ def run_bot():
         random_sleep(0.5, 1)
         driver.execute_script("window.scrollBy(0, 500);")
         random_sleep(0.5, 1)
-        package_element.click()
+        # Sử dụng JavaScript để click
+        driver.execute_script("arguments[0].click();", package_element)
         random_sleep(1, 2)
 
         random_amount = random.randint(50, 30000)
@@ -307,7 +310,8 @@ def run_bot():
         # Di chuyển chuột đến nút trước khi click
         ActionChains(driver).move_to_element(pay_button).perform()
         random_sleep(0.5, 1)
-        pay_button.click()
+        # Sử dụng JavaScript để click
+        driver.execute_script("arguments[0].click();", pay_button)
         random_sleep(2, 4)
 
         # Chuyển sang tab mới
