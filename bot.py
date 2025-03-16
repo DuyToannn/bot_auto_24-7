@@ -124,11 +124,9 @@ def run_bot():
         options.add_argument("--disable-notifications")
         options.add_argument("--disable-popup-blocking")
         # Thiết lập kích thước cửa sổ Chrome nhỏ hơn
-        options.add_argument("--window-size=1024,768")
-        # Vô hiệu hóa chế độ toàn màn hình
-        options.add_argument("--start-maximized=false")
+ 
 
-        options.add_argument('--headless')         # Thêm các tham số để giả lập người dùng thực
+        # options.add_argument('--headless')         # Thêm các tham số để giả lập người dùng thực
         options.add_argument("--disable-blink-features")
         options.add_argument(f'--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
 
