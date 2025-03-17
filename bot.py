@@ -17,48 +17,14 @@ import re
 import io
 from dotenv import load_dotenv
 import pymongo
-<<<<<<< HEAD
-from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
-import pytesseract
-from PIL import Image
-import undetected_chromedriver as uc
-if os.getenv("RAILWAY_ENVIRONMENT"):
-    pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
-else:
-    # Đặt đường dẫn local (Windows)
-    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-
-# Load environment variables
-=======
->>>>>>> parent of b8a522e (update mongo 4)
 load_dotenv()
 mongo_uri = os.getenv('MONGO_URI')
-<<<<<<< HEAD
-db = None
-collection = None
-mongo_client = None
-
-try:
-    mongo_client = pymongo.MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
-    mongo_client.admin.command('ping')  # Verify connection
-    db = mongo_client['bot_database']
-    collection = db['bank_info']
-    print("✅ MongoDB connection successful")
-except (ConnectionFailure, ServerSelectionTimeoutError) as e:
-    print(f"❌ MongoDB connection error: {e}")
-    print("⚠️ Bot will continue without database functionality")
-
-
-# Constants
-PACKAGE_NAME = "Nạp Nhanh 04"
-=======
 client = pymongo.MongoClient(mongo_uri)
 db = client['bot_database']
 COOKIE_ENV_VAR = "COOKIES_JSON"  
 WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/21914696/2ldbgyz/"
 PACKAGE_NAME = "Nạp Nhanh 04"  
 collection = db['bank_info'] 
->>>>>>> parent of b8a522e (update mongo 4)
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')
 print(f"🔵 Bot cho {PACKAGE_NAME} đang khởi động...")
@@ -83,51 +49,6 @@ def send_telegram_message(message):
         print(f"❌ Lỗi khi gửi tin nhắn Telegram: {e}")
         return False
 
-<<<<<<< HEAD
-def save_to_database(bank_info):
-    if collection is None:
-        print("⚠️ Không thể lưu vào database - Kết nối MongoDB không khả dụng")
-        return False
-    
-    try:
-        collection.insert_one(bank_info)
-        print("✅ Dữ liệu đã được lưu vào MongoDB")
-        return True
-    except Exception as e:
-        print(f"❌ Lỗi khi lưu vào database: {e}")
-        return False
-
-def check_existing_record(stk):
-    if collection is None:
-        print("⚠️ Không thể kiểm tra database - Kết nối MongoDB không khả dụng")
-        return False
-    
-    try:
-        existing_record = collection.find_one({"stk": stk})
-        return existing_record is not None
-    except Exception as e:
-        print(f"❌ Lỗi khi kiểm tra database: {e}")
-        return False
-
-def get_captcha_text(captcha_base64):
-    try:
-        image_data = base64.b64decode(captcha_base64.split(',')[1])
-        image = Image.open(io.BytesIO(image_data))
-        captcha_code = pytesseract.image_to_string(image, config="--psm 8 -c tessedit_char_whitelist=0123456789").strip()
-        captcha_code = re.sub(r'\D', '', captcha_code)  # Chỉ lấy số
-
-        if len(captcha_code) == 4:
-            print(f"✅ Mã xác minh nhận diện: {captcha_code}")
-            return captcha_code
-        else:
-            print(f"⚠️ Mã OCR sai ({captcha_code}), thử lại...")
-            return None
-    except Exception as e:
-        print(f"❌ Lỗi nhận diện mã xác minh: {e}")
-        return None
-
-def run_bot():
-=======
 def run_bot():
     # Cấu hình Chrome Options
     chrome_options = Options()
@@ -144,7 +65,6 @@ def run_bot():
     driver = webdriver.Chrome(options=chrome_options)
     print("✅ ChromeDriver đã khởi động")
     
->>>>>>> parent of b8a522e (update mongo 4)
     try:
         # Sử dụng undetected_chromedriver thay vì selenium webdriver thông thường
         options = uc.ChromeOptions()
