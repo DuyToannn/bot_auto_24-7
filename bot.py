@@ -4,8 +4,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
-from selenium.webdriver.chrome.service import Service
 import requests
 import time
 import json
@@ -19,6 +17,7 @@ import re
 import io
 from dotenv import load_dotenv
 import pymongo
+<<<<<<< HEAD
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 import pytesseract
 from PIL import Image
@@ -30,10 +29,11 @@ else:
     pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 # Load environment variables
+=======
+>>>>>>> parent of b8a522e (update mongo 4)
 load_dotenv()
-
-# MongoDB configuration with error handling
 mongo_uri = os.getenv('MONGO_URI')
+<<<<<<< HEAD
 db = None
 collection = None
 mongo_client = None
@@ -51,6 +51,14 @@ except (ConnectionFailure, ServerSelectionTimeoutError) as e:
 
 # Constants
 PACKAGE_NAME = "Nạp Nhanh 04"
+=======
+client = pymongo.MongoClient(mongo_uri)
+db = client['bot_database']
+COOKIE_ENV_VAR = "COOKIES_JSON"  
+WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/21914696/2ldbgyz/"
+PACKAGE_NAME = "Nạp Nhanh 04"  
+collection = db['bank_info'] 
+>>>>>>> parent of b8a522e (update mongo 4)
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')
 print(f"🔵 Bot cho {PACKAGE_NAME} đang khởi động...")
@@ -75,6 +83,7 @@ def send_telegram_message(message):
         print(f"❌ Lỗi khi gửi tin nhắn Telegram: {e}")
         return False
 
+<<<<<<< HEAD
 def save_to_database(bank_info):
     if collection is None:
         print("⚠️ Không thể lưu vào database - Kết nối MongoDB không khả dụng")
@@ -118,6 +127,24 @@ def get_captcha_text(captcha_base64):
         return None
 
 def run_bot():
+=======
+def run_bot():
+    # Cấu hình Chrome Options
+    chrome_options = Options()
+    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
+    chrome_options.add_argument(f"user-agent={user_agent}")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    chrome_options.add_experimental_option("useAutomationExtension", False)
+
+    # Khởi tạo ChromeDriver
+    driver = webdriver.Chrome(options=chrome_options)
+    print("✅ ChromeDriver đã khởi động")
+    
+>>>>>>> parent of b8a522e (update mongo 4)
     try:
         # Sử dụng undetected_chromedriver thay vì selenium webdriver thông thường
         options = uc.ChromeOptions()
@@ -243,7 +270,8 @@ def run_bot():
             print(f"✅ Đã lấy thông tin: {ho_ten}, {stk}, {ten_ngan_hang}")
 
             # Kiểm tra xem STK đã tồn tại trong database chưa
-            if check_existing_record(stk):
+            existing_record = collection.find_one({"stk": stk})
+            if existing_record:
                 print(f"⚠️ STK {stk} đã tồn tại trong database")
             else:
                 bank_info = {
@@ -253,7 +281,8 @@ def run_bot():
                     "goi_nap": PACKAGE_NAME,
                     "timestamp": time.time()
                 }
-                save_to_database(bank_info)
+                collection.insert_one(bank_info)
+                print("✅ Dữ liệu đã được lưu vào MongoDB")
                 
                 # Gửi thông báo qua Telegram
                 message = f"""
