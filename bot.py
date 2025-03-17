@@ -12,6 +12,9 @@ import json
 import os
 import random
 import base64
+from login_handler import random_sleep, handle_login
+
+
 import re
 import io
 from dotenv import load_dotenv
@@ -119,23 +122,23 @@ def run_bot():
         # Sử dụng undetected_chromedriver thay vì selenium webdriver thông thường
         options = uc.ChromeOptions()
         options.add_argument("--no-sandbox")
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument("--disable-extensions")
+        options.add_argument("--disable-gpu")
         options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--start-maximized")
-        options.add_argument("--disable-notifications")
-        options.add_argument("--disable-popup-blocking")
-        # Thiết lập kích thước cửa sổ Chrome nhỏ hơn
- 
-
-        # options.add_argument('--headless')         # Thêm các tham số để giả lập người dùng thực
-        options.add_argument("--disable-blink-features")
-        options.add_argument(f'--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
-
+        options.add_argument("--enable-javascript")
+        options.add_argument("--window-size=1920,1080")
+        options.add_argument("--disable-dev-tools")  # Vô hiệu hóa dev tools
+        
+        # Thêm các tham số để giả lập người dùng thực
+        # options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        # options.add_experimental_option("useAutomationExtension", False)
+        
         # Khởi tạo trình duyệt với undetected_chromedriver
         driver = uc.Chrome(options=options)
         
-        # Thêm độ trễ ngẫu nhiên để mô phỏng hành vi người dùng
-        def random_sleep(min_time=1, max_time=3):
-            time.sleep(random.uniform(min_time, max_time))
+        # Thêm JavaScript để giả lập trình duyệt thật
+        driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
         print("✅ ChromeDriver đã khởi động với chế độ không phát hiện")
         
@@ -154,108 +157,8 @@ def run_bot():
 
         # Kiểm tra xem có cần đăng nhập không
         if "Login" in driver.current_url:
-            print("⚠️ Cần đăng nhập!")
-            
-            # Thêm độ trễ trước khi nhập thông tin đăng nhập
-            random_sleep(1, 2)
-            
-            # Tìm và nhập tên đăng nhập với hành vi giống người dùng
-            username_field = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, "//input[@ng-model='$ctrl.user.account.value']"))
-            )
-            username_field.click()
-            random_sleep(0.3, 0.8)
-            
-            # Chọn ngẫu nhiên một tài khoản từ danh sách
-            account_number = random.randint(1, 5)
-            account_key = f"USER_ACCOUNT{'' if account_number == 1 else account_number}"
-            password_key = f"USER_PASSWORD{'' if account_number == 1 else account_number}"
-            
-            selected_account = os.getenv(account_key)
-            selected_password = os.getenv(password_key)
-            
-            print(f"🔑 Đang sử dụng tài khoản: {selected_account}")
-            
-            # Nhập từng ký tự một với độ trễ ngẫu nhiên
-            for char in selected_account:
-                username_field.send_keys(char)
-                random_sleep(0.05, 0.15)
-            
-            random_sleep(0.5, 1)
-            
-            # Tìm và nhập mật khẩu với hành vi giống người dùng
-            password_field = driver.find_element(By.XPATH, "//input[@ng-model='$ctrl.user.password.value']")
-            password_field.click()
-            random_sleep(0.3, 0.8)
-            
-            # Nhập từng ký tự một với độ trễ ngẫu nhiên
-            for char in selected_password:
-                password_field.send_keys(char)
-                random_sleep(0.05, 0.15)
-            
-            login_success = False
-            max_attempts = 5
-            attempt = 0
-            
-            while not login_success and attempt < max_attempts:
-                attempt += 1
-                print(f"Lần thử đăng nhập thứ {attempt}")
-                
-                captcha_input = driver.find_element(By.XPATH, "//input[@ng-model='$ctrl.code']")
-                captcha_input.click()
-                random_sleep(1, 2)
-
-                captcha_image = driver.find_element(By.XPATH, "//gupw-captcha-login-box//img")
-                captcha_base64 = captcha_image.get_attribute("src")
-                
-                captcha_code = get_captcha_text(captcha_base64)
-                if not captcha_code:
-                    print("⚠️ Không thể nhận diện mã xác minh, thử lại...")
-                    # Làm mới captcha
-                    try:
-                        refresh_button = driver.find_element(By.XPATH, "//i[contains(@class, 'refresh')]")
-                        refresh_button.click()
-                        random_sleep(1, 2)
-                    except:
-                        pass
-                    continue
-                    
-                captcha_input.clear()
-                random_sleep(0.3, 0.7)
-                
-                # Nhập từng ký tự captcha một với độ trễ ngẫu nhiên
-                for char in captcha_code:
-                    captcha_input.send_keys(char)
-                    random_sleep(0.1, 0.3)
-                
-                random_sleep(0.5, 1.5)
-
-                # Sử dụng JavaScript để click vào nút đăng nhập thay vì click trực tiếp
-                # Điều này giúp tránh lỗi aria-hidden
-                login_button = driver.find_element(By.XPATH, "//button[contains(@ng-class, 'login-btn')]")
-                driver.execute_script("arguments[0].click();", login_button)
-                random_sleep(2, 4)
-
-                # Kiểm tra thông báo lỗi
-                try:
-                    error_dialog = WebDriverWait(driver, 5).until(
-                        EC.presence_of_element_located((By.XPATH, "//gupw-dialog-alert"))
-                    )
-                    # Nếu có thông báo lỗi
-                    print("⚠️ Mã xác minh không đúng, thử lại...")
-                    # Sử dụng JavaScript để click vào nút đóng thông báo lỗi
-                    close_button = error_dialog.find_element(By.XPATH, ".//button[contains(@ng-click, '$ctrl.ok()')]")
-                    driver.execute_script("arguments[0].click();", close_button)
-                    random_sleep(1, 2)
-                    continue
-                except:
-                    # Không có thông báo lỗi = đăng nhập thành công
-                    login_success = True
-                    print("✅ Đăng nhập thành công!")
-                    break
-
+            login_success = handle_login(driver, get_captcha_text)
             if not login_success:
-                print("❌ Đã thử đăng nhập nhiều lần nhưng không thành công")
                 return
 
         # Đã đăng nhập hoặc không cần đăng nhập, chuyển đến trang nạp tiền
