@@ -22,7 +22,6 @@ RUN apt-get update && apt-get install -y \
     libxrandr2 \
     && rm -rf /var/lib/apt/lists/*
 
-
 # Cài đặt Python dependencies
 WORKDIR /app
 COPY requirements.txt .
