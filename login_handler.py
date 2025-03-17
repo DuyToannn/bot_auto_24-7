@@ -105,13 +105,13 @@ def handle_login(driver, get_captcha_text):
                 # Kiểm tra nếu là lỗi đăng nhập (không phải lỗi captcha)
                 error_content = error_dialog.find_element(By.XPATH, ".//div[@class='modal-body']//div").text
                 if "Lỗi đăng nhập" in error_content:
-                    print("⚠️ Lỗi đăng nhập, thử lại từ đầu...")
+                    print("⚠️ Lỗi đăng nhập, thử lại mã xác minh...")
                     # Đóng thông báo lỗi
                     close_button = error_dialog.find_element(By.XPATH, ".//button[contains(@ng-click, '$ctrl.ok()')]")
                     driver.execute_script("arguments[0].click();", close_button)
                     random_sleep(1, 2)
-                    # Thoát khỏi vòng lặp hiện tại để quay lại bước đăng nhập từ đầu
-                    break
+                    # Tiếp tục vòng lặp hiện tại để nhập lại mã xác minh mà không cần nhập lại tài khoản và mật khẩu
+                    continue
                 else:
                     # Nếu là lỗi captcha
                     print("⚠️ Mã xác minh không đúng, thử lại...")
