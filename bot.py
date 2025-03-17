@@ -11,6 +11,7 @@ import os
 import random
 import base64
 from login_handler import random_sleep, handle_login
+import undetected_chromedriver as uc
 
 
 import re
@@ -48,6 +49,29 @@ def send_telegram_message(message):
     except Exception as e:
         print(f"❌ Lỗi khi gửi tin nhắn Telegram: {e}")
         return False
+
+def load_cookies(driver):
+    """
+    Tải cookie từ biến môi trường COOKIES_JSON
+    """
+    cookies_json = os.getenv(COOKIE_ENV_VAR)
+    if not cookies_json:
+        print(f"⚠️ Không tìm thấy biến môi trường {COOKIE_ENV_VAR}. Sẽ yêu cầu đăng nhập.")
+        return
+
+    cookies_json = cookies_json.strip()
+    if not cookies_json.startswith("[") or not cookies_json.endswith("]"):
+        print(f"❌ COOKIES_JSON không có định dạng JSON hợp lệ: {cookies_json}")
+        return
+
+    try:
+        cookies = json.loads(cookies_json)
+        for cookie in cookies:
+            driver.add_cookie(cookie)
+        print(f"✅ Cookie đã được tải từ biến môi trường {COOKIE_ENV_VAR}")
+    except json.JSONDecodeError as e:
+        print(f"❌ Lỗi giải mã JSON từ {COOKIE_ENV_VAR}: {e}")
+        print(f"🔍 Nội dung COOKIES_JSON: {cookies_json}")
 
 def run_bot():
     # Cấu hình Chrome Options
@@ -93,6 +117,11 @@ def run_bot():
         driver.get(os.getenv("BASE_URL"))
         random_sleep(2, 4)
         
+        # Tải cookie
+        load_cookies(driver)
+        driver.refresh()
+        random_sleep(2, 4)
+        
         # Kiểm tra và đóng popup nếu có
         try:
             WebDriverWait(driver, 5).until(
@@ -102,11 +131,7 @@ def run_bot():
         except Exception:
             pass
 
-        # Kiểm tra xem có cần đăng nhập không
-        if "Login" in driver.current_url:
-            login_success = handle_login(driver, get_captcha_text)
-            if not login_success:
-                return
+
 
         # Đã đăng nhập hoặc không cần đăng nhập, chuyển đến trang nạp tiền
         print("🔄 Chuyển đến trang nạp tiền")
