@@ -11,8 +11,6 @@ import os
 import random
 import base64
 from login_handler import random_sleep, handle_login
-import undetected_chromedriver as uc
-
 
 import re
 import io

@@ -22,11 +22,6 @@ RUN apt-get update && apt-get install -y \
     libxrandr2 \
     && rm -rf /var/lib/apt/lists/*
 
-# Cài đặt Tesseract-OCR
-RUN apt-get update && apt-get install -y \
-    tesseract-ocr \
-    libtesseract-dev \
-    && rm -rf /var/lib/apt/lists/*
 
 # Cài đặt Python dependencies
 WORKDIR /app
