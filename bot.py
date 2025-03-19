@@ -24,7 +24,7 @@ WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/21914696/2ldbgyz/"
 PACKAGE_NAME = "Nạp Nhanh 04"
 collection = db['bank_info']
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
-TELEGRAM_CHAT_IDS = os.getenv('TELEGRAM_CHAT_IDS', '').split(',')
+TELEGRAM_CHAT_IDS = [chat_id.strip() for chat_id in os.getenv('TELEGRAM_CHAT_IDS', '').split(',')]
 print(f"🔵 Bot cho {PACKAGE_NAME} đang khởi động...")
 
 def random_sleep(min_sec, max_sec):
@@ -37,14 +37,20 @@ def send_telegram_message(message):
         return False
     
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": TELEGRAM_CHAT_IDS, "text": message, "parse_mode": "HTML"}
+    success = True
     
-    try:
-        response = requests.post(url, json=payload)
-        return response.status_code == 200
-    except Exception as e:
-        print(f"❌ Lỗi khi gửi tin nhắn Telegram: {e}")
-        return False
+    for chat_id in TELEGRAM_CHAT_IDS:
+        try:
+            payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
+            response = requests.post(url, json=payload)
+            if response.status_code != 200:
+                success = False
+                print(f"❌ Lỗi gửi tin nhắn đến chat {chat_id}: {response.text}")
+        except Exception as e:
+            success = False
+            print(f"❌ Lỗi khi gửi tin nhắn Telegram đến chat {chat_id}: {e}")
+    
+    return success
 
 def setup_driver():
     """Setup ChromeDriver with anti-detection options"""
@@ -165,7 +171,6 @@ def run_bot():
             if window_handle != original_window:
                 driver.switch_to.window(window_handle)
                 break
-
         # Get bank info
         bank_info = {}
         for key, xpath in {
@@ -179,7 +184,6 @@ def run_bot():
 
         if not all(bank_info.values()):
             raise Exception("Missing bank information!")
-
         # Process bank info
         existing_record = collection.find_one({"stk": bank_info['stk']})
         if existing_record:
