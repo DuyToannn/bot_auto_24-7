@@ -3,7 +3,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.edge.options import Options
+from selenium.webdriver.chrome.options import Options
 import requests
 import time
 import json
@@ -54,17 +54,17 @@ def send_telegram_message(message):
 
 def setup_driver():
     """Setup ChromeDriver with anti-detection options"""
-    edge_options = Options()
+    chrome_options = Options()
     user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
-    edge_options.add_argument(f"user-agent={user_agent}")
-    edge_options.add_argument("--disable-blink-features=AutomationControlled")
-    edge_options.add_argument("--headless")
-    edge_options.add_argument("--no-sandbox")
-    edge_options.add_argument("--disable-dev-shm-usage")
-    edge_options.add_argument("excludeSwitches", ["enable-automation"])
-    edge_options.add_argument("useAutomationExtension", False)
+    chrome_options.add_argument(f"user-agent={user_agent}")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    chrome_options.add_experimental_option("useAutomationExtension", False)
     
-    driver = webdriver.Edge(options=edge_options)
+    driver = webdriver.Chrome(options=chrome_options)
     driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
         "source": """
             Object.defineProperty(navigator, 'webdriver', {
