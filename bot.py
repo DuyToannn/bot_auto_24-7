@@ -15,6 +15,7 @@ import uuid
 from dotenv import load_dotenv
 import pymongo
 from cookie_handler import CookieHandler
+
 load_dotenv()
 mongo_uri = os.getenv('MONGO_URI')
 client = pymongo.MongoClient(mongo_uri)
@@ -79,23 +80,6 @@ def setup_driver():
     })
     return driver
 
-
-    """Load cookies from environment variable"""
-    cookies_json = os.getenv(COOKIE_ENV_VAR)
-    if not cookies_json:
-        print(f"⚠️ Không tìm thấy biến môi trường {COOKIE_ENV_VAR}")
-        return False
-
-    try:
-        cookies = json.loads(cookies_json)
-        for cookie in cookies:
-            driver.add_cookie(cookie)
-        print(f"✅ Cookie đã được tải từ biến môi trường {COOKIE_ENV_VAR}")
-        return True
-    except json.JSONDecodeError as e:
-        print(f"❌ Lỗi giải mã JSON từ {COOKIE_ENV_VAR}: {e}")
-        return False
-
 def check_existing_record(stk):
     if collection is None:
         print("⚠️ Không thể kiểm tra database - Kết nối MongoDB không khả dụng")
@@ -114,8 +98,6 @@ def handle_token_expired(cookie_handler, account_id):
         print(f"✅ Đã đánh dấu tài khoản {account_id} hết token trong DB")
     message = f"""
 🔔 <b>TÀI KHOẢN HẾT TOKEN</b>
-🔑 <b>Account ID:</b> {account_id}
-⚠️ Cần đăng nhập lại tài khoản này!
     """
     send_telegram_message(message)
     raise Exception("Tài khoản hết token, dừng bot để xử lý thủ công.")
@@ -127,16 +109,12 @@ def run_bot():
         driver = setup_driver()
         print("✅ ChromeDriver đã khởi động thành công!")
 
-
         cookie_handler = CookieHandler()
         # Lấy account_id
         account_id = cookie_handler.get_account_id()
         if not account_id:
             raise Exception("Không thể xác định account_id từ MongoDB")
         print(f"🔑 Sử dụng tài khoản với ID: {account_id}")
-
-
-
 
         # Navigate to base URL
         base_url = os.getenv("BASE_URL")
@@ -152,7 +130,7 @@ def run_bot():
         driver.refresh()
         time.sleep(3)
 
-   # Kiểm tra đăng nhập
+        # Kiểm tra đăng nhập
         if "Login" in driver.current_url:
             print("⚠️ Cookie không hợp lệ. Cần đăng nhập thủ công!")
             input("👉 Hãy đăng nhập vào tài khoản, sau đó nhấn Enter để tiếp tục...")
@@ -187,7 +165,10 @@ def run_bot():
 🔒 <b>TÀI KHOẢN BỊ ĐÓNG BĂNG</b>
 """
                 send_telegram_message(message)
-                raise Exception("Tài khoản bị đóng băng, dừng bot để xử lý.")
+                print("🔒 Tài khoản bị đóng băng, đóng Chrome và chạy lại...")
+                if driver:
+                    driver.quit()
+                return  # Thoát hàm ngay để chạy lại từ đầu
         except:
             pass
 
@@ -200,6 +181,7 @@ def run_bot():
             random_sleep(0.5, 1.5)
         except:
             pass
+
         # Select package
         try:
             package_element = WebDriverWait(driver, 20).until(
@@ -212,8 +194,8 @@ def run_bot():
             print("✅ Đã chọn gói thành công")
         except Exception as e:
             print(f"❌ Không thể chọn gói {PACKAGE_NAME}: {e}")
-            # Kiểm tra nút đăng xuất chỉ khi chưa phát hiện tài khoản bị đóng băng
-            if "đóng băng" not in str(e):
+            handle_token_expired(cookie_handler, account_id)
+            if "đóng băng" not in str(e).lower():
                 try:
                     logout_button = WebDriverWait(driver, 5).until(
                         EC.presence_of_element_located((By.XPATH, "//button[contains(@class, '_1TEhFF5lWfbkg-wGKQap0W')]//span[@translate='Shared_Logout']"))
@@ -249,6 +231,7 @@ def run_bot():
             if window_handle != original_window:
                 driver.switch_to.window(window_handle)
                 break
+
         # Get bank info
         bank_info = {}
         for key, xpath in {
@@ -262,6 +245,7 @@ def run_bot():
 
         if not all(bank_info.values()):
             raise Exception("Missing bank information!")
+
         # Process bank info
         existing_record = collection.find_one({"stk": bank_info['stk']})
         if existing_record:
