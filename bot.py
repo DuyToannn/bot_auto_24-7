@@ -55,8 +55,6 @@ def send_telegram_message(message):
 def setup_driver():
     """Setup ChromeDriver with anti-detection options"""
     chrome_options = Options()
-    user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
-    chrome_options.add_argument(f"user-agent={user_agent}")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--disable-dev-shm-usage")   
