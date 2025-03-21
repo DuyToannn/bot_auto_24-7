@@ -212,15 +212,16 @@ def run_bot():
             print("✅ Đã chọn gói thành công")
         except Exception as e:
             print(f"❌ Không thể chọn gói {PACKAGE_NAME}: {e}")
-            # Kiểm tra xem tài khoản có bị khóa không trước khi xử lý token hết hạn
-            try:
-                wallet_locked = WebDriverWait(driver, 5).until(
-                    EC.presence_of_element_located((By.XPATH, "//div[@ng-if='$ctrl.isLock']"))
-                )
-                if not wallet_locked.is_displayed():
-                    handle_token_expired(cookie_handler, account_id)
-            except:
-                handle_token_expired(cookie_handler, account_id)
+            # Kiểm tra nút đăng xuất chỉ khi chưa phát hiện tài khoản bị đóng băng
+            if "đóng băng" not in str(e):
+                try:
+                    logout_button = WebDriverWait(driver, 5).until(
+                        EC.presence_of_element_located((By.XPATH, "//button[contains(@class, '_1TEhFF5lWfbkg-wGKQap0W')]//span[@translate='Shared_Logout']"))
+                    )
+                    if logout_button.is_displayed():
+                        handle_token_expired(cookie_handler, account_id)
+                except:
+                    pass
 
         # Enter amount
         random_amount = random.randint(50, 30000)
