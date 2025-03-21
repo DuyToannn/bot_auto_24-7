@@ -31,4 +31,4 @@ RUN pip install -r requirements.txt
 COPY . .
 
 # Chạy ứng dụng
-CMD ["python", "bot7.py"]
+CMD ["python", "bot.py"]
