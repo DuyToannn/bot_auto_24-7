@@ -14,7 +14,7 @@ import signal
 import uuid
 from dotenv import load_dotenv
 import pymongo
-
+from cookie_handler import CookieHandler
 load_dotenv()
 mongo_uri = os.getenv('MONGO_URI')
 client = pymongo.MongoClient(mongo_uri)
@@ -57,10 +57,20 @@ def setup_driver():
     chrome_options = Options()
     user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
     chrome_options.add_argument(f"user-agent={user_agent}")
-    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-    chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--disable-dev-shm-usage")   
+    chrome_options.add_argument("--disable-web-security")
+    chrome_options.add_argument("--disable-logging")
+    chrome_options.add_argument("--disable-notifications")
+    chrome_options.add_argument("--disable-default-apps")
+    chrome_options.add_argument("--disable-extensions")
+    chrome_options.add_argument("--disable-infobars")
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-webgl")
+    chrome_options.add_argument("--enable-unsafe-swiftshader") 
+    chrome_options.add_argument("--disable-software-rasterizer")  
+    chrome_options.add_argument("--log-level=3")
     driver = webdriver.Chrome(options=chrome_options)
     driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
         "source": """
@@ -71,7 +81,7 @@ def setup_driver():
     })
     return driver
 
-def load_cookies(driver):
+
     """Load cookies from environment variable"""
     cookies_json = os.getenv(COOKIE_ENV_VAR)
     if not cookies_json:
@@ -88,12 +98,47 @@ def load_cookies(driver):
         print(f"❌ Lỗi giải mã JSON từ {COOKIE_ENV_VAR}: {e}")
         return False
 
+def check_existing_record(stk):
+    if collection is None:
+        print("⚠️ Không thể kiểm tra database - Kết nối MongoDB không khả dụng")
+        return False
+    try:
+        existing_record = collection.find_one({"stk": stk})
+        return existing_record is not None
+    except Exception as e:
+        print(f"❌ Lỗi khi kiểm tra database: {e}")
+        return False
+
+def handle_token_expired(cookie_handler, account_id):
+    """Xử lý khi token hết hạn"""
+    update_result = cookie_handler.mark_account_expired(account_id)
+    if update_result:
+        print(f"✅ Đã đánh dấu tài khoản {account_id} hết token trong DB")
+    message = f"""
+🔔 <b>TÀI KHOẢN HẾT TOKEN</b>
+🔑 <b>Account ID:</b> {account_id}
+⚠️ Cần đăng nhập lại tài khoản này!
+    """
+    send_telegram_message(message)
+    raise Exception("Tài khoản hết token, dừng bot để xử lý thủ công.")
+
 def run_bot():
     driver = None
     try:
         # Initialize driver
         driver = setup_driver()
         print("✅ ChromeDriver đã khởi động thành công!")
+
+
+        cookie_handler = CookieHandler()
+        # Lấy account_id
+        account_id = cookie_handler.get_account_id()
+        if not account_id:
+            raise Exception("Không thể xác định account_id từ MongoDB")
+        print(f"🔑 Sử dụng tài khoản với ID: {account_id}")
+
+
+
 
         # Navigate to base URL
         base_url = os.getenv("BASE_URL")
@@ -104,9 +149,17 @@ def run_bot():
         random_sleep(2, 4)
 
         # Load cookies and refresh
-        if load_cookies(driver):
-            driver.refresh()
-            random_sleep(2, 4)
+        if not cookie_handler.load_cookies_to_driver(driver, account_id):
+            raise Exception("Không thể load cookies, kiểm tra tài khoản")
+        driver.refresh()
+        time.sleep(3)
+
+   # Kiểm tra đăng nhập
+        if "Login" in driver.current_url:
+            print("⚠️ Cookie không hợp lệ. Cần đăng nhập thủ công!")
+            input("👉 Hãy đăng nhập vào tài khoản, sau đó nhấn Enter để tiếp tục...")
+
+        print("✅ Đã đăng nhập! Tiếp tục nạp tiền...")
 
         # Handle initial popup
         try:
@@ -125,6 +178,21 @@ def run_bot():
         driver.get(deposit_url)
         random_sleep(2, 4)
 
+        # Check if wallet is locked
+        try:
+            wallet_locked = WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.XPATH, "//div[@ng-if='$ctrl.isLock']"))
+            )
+            if wallet_locked.is_displayed():
+                cookie_handler.mark_account_locked(account_id)
+                message = f"""
+🔒 <b>TÀI KHOẢN BỊ ĐÓNG BĂNG</b>
+"""
+                send_telegram_message(message)
+                raise Exception("Tài khoản bị đóng băng, dừng bot để xử lý.")
+        except:
+            pass
+
         # Handle deposit page popup
         try:
             popup_close = WebDriverWait(driver, 5).until(
@@ -134,13 +202,27 @@ def run_bot():
             random_sleep(0.5, 1.5)
         except:
             pass
-
         # Select package
-        package_element = WebDriverWait(driver, 20).until(
-            EC.element_to_be_clickable((By.XPATH, f"//li[.//h3[contains(text(), '{PACKAGE_NAME}')]]"))
-        )
-        ActionChains(driver).move_to_element(package_element).pause(0.5).click().perform()
-        random_sleep(1, 2)
+        try:
+            package_element = WebDriverWait(driver, 20).until(
+                EC.element_to_be_clickable((By.XPATH, f"//li[.//h3[contains(text(), '{PACKAGE_NAME}')]]"))
+            )
+            driver.execute_script("window.scrollBy(0, 500);")
+            time.sleep(random.uniform(1, 2))
+            ActionChains(driver).move_to_element(package_element).pause(0.5).click().perform()
+            time.sleep(random.uniform(1, 2))
+            print("✅ Đã chọn gói thành công")
+        except Exception as e:
+            print(f"❌ Không thể chọn gói {PACKAGE_NAME}: {e}")
+            # Kiểm tra xem tài khoản có bị khóa không trước khi xử lý token hết hạn
+            try:
+                wallet_locked = WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located((By.XPATH, "//div[@ng-if='$ctrl.isLock']"))
+                )
+                if not wallet_locked.is_displayed():
+                    handle_token_expired(cookie_handler, account_id)
+            except:
+                handle_token_expired(cookie_handler, account_id)
 
         # Enter amount
         random_amount = random.randint(50, 30000)
