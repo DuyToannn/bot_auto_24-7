@@ -43,6 +43,7 @@ class CookieHandler:
                 "_id": account_id,
                 "is_locked": {"$ne": True},
                 "token_expired": {"$ne": True}
+               
             })
 
             if account_data and '_pat' in account_data and '_prt' in account_data:
@@ -147,4 +148,17 @@ class CookieHandler:
             return account_data.get("_id")
         except Exception as e:
             print(f"❌ Lỗi khi lấy account_id từ MongoDB: {e}")
+            return None
+
+    def get_account_info(self, account_id):
+
+        try:
+            account_data = self.collection.find_one({"_id": account_id})
+            if account_data:
+                return account_data  # Trả về toàn bộ thông tin tài khoản
+            else:
+                print("⚠️ Không tìm thấy tài khoản với account_id:", account_id)
+                return None
+        except Exception as e:
+            print(f"❌ Lỗi khi lấy thông tin tài khoản: {e}")
             return None

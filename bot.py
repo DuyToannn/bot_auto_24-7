@@ -133,7 +133,11 @@ def run_bot():
         account_id = cookie_handler.get_account_id()
         if not account_id:
             raise Exception("Không thể xác định account_id từ MongoDB")
-        print(f"🔑 Sử dụng tài khoản với ID: {account_id}")
+
+
+        account_info = cookie_handler.get_account_info(account_id)
+        account_name = account_info.get('_account', 'Unknown') if account_info else 'Unknown'
+        print(f"🔑 Sử dụng tài khoản với ID: {account_id}, Tên tài khoản: {account_name}")
 
 
 
@@ -184,7 +188,7 @@ def run_bot():
             if wallet_locked.is_displayed():
                 cookie_handler.mark_account_locked(account_id)
                 message = f"""
-🔒 <b>TÀI KHOẢN BỊ ĐÓNG BĂNG</b>
+🔒 <b>TÀI KHOẢN BỊ ĐÓNG BĂNG : {account_name}</b>
 """
                 send_telegram_message(message)
                 raise Exception("Tài khoản bị đóng băng, dừng bot để xử lý.")
