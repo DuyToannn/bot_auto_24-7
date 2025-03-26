@@ -93,11 +93,14 @@ def check_existing_record(stk):
 
 def handle_token_expired(cookie_handler, account_id):
     """Xử lý khi token hết hạn"""
+    account_info = cookie_handler.get_account_info(account_id)
+    account_name = account_info.get('_account', 'Unknown') if account_info else 'Unknown'
+    
     update_result = cookie_handler.mark_account_expired(account_id)
     if update_result:
-        print(f"✅ Đã đánh dấu tài khoản {account_id} hết token trong DB")
+        print(f"✅ Đã đánh dấu tài khoản {account_name} hết token trong DB")
     message = f"""
-🔔 <b>TÀI KHOẢN HẾT TOKEN</b>
+🔔 <b>TÀI KHOẢN ĐÃ ĐĂNG XUẤT: {account_name}</b>
     """
     send_telegram_message(message)
     raise Exception("Tài khoản hết token, dừng bot để xử lý thủ công.")
@@ -137,8 +140,6 @@ def run_bot():
         # Kiểm tra đăng nhập
         if "Login" in driver.current_url:
             print("⚠️ Cookie không hợp lệ. Cần đăng nhập thủ công!")
-            input("👉 Hãy đăng nhập vào tài khoản, sau đó nhấn Enter để tiếp tục...")
-
         print("✅ Đã đăng nhập! Tiếp tục nạp tiền...")
 
         # Handle initial popup
@@ -157,6 +158,18 @@ def run_bot():
             
         driver.get(deposit_url)
         random_sleep(2, 4)
+
+        max_wait_time = 10  
+        start_time = time.time()
+        while time.time() - start_time < max_wait_time:
+            current_url = driver.current_url
+            if current_url == base_url:
+                handle_token_expired(cookie_handler, account_id)
+            elif deposit_url in current_url:
+                break
+            time.sleep(1)
+        else:
+            handle_token_expired(cookie_handler, account_id)
 
         # Check if wallet is locked
         try:
@@ -197,15 +210,21 @@ def run_bot():
             time.sleep(random.uniform(1, 2))
             print("✅ Đã chọn gói thành công")
         except Exception as e:
-            print(f"❌ Không thể chọn gói {PACKAGE_NAME}: {e}")
-            handle_token_expired(cookie_handler, account_id)
+            if "no such element" in str(e).lower():
+                send_telegram_message(f"❌ Không có gói {PACKAGE_NAME}")
+            else:
+                send_telegram_message(f"❌ Không có gói {PACKAGE_NAME}")
+            return
+        except Exception as e:
+            if "no such element" in str(e).lower():
+                send_telegram_message(message)
+            else:
+                send_telegram_message(f"❌ Không thể chọn gói {PACKAGE_NAME}: {e}")
             if "đóng băng" not in str(e).lower():
                 try:
                     logout_button = WebDriverWait(driver, 5).until(
                         EC.presence_of_element_located((By.XPATH, "//button[contains(@class, '_1TEhFF5lWfbkg-wGKQap0W')]//span[@translate='Shared_Logout']"))
                     )
-                    if logout_button.is_displayed():
-                        handle_token_expired(cookie_handler, account_id)
                 except:
                     pass
 
